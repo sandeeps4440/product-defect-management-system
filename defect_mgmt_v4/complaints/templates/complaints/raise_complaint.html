@@ -1,0 +1,150 @@
+{% extends 'complaints/base.html' %}
+{% block title %}Report Defect — DefectTrack{% endblock %}
+{% block page_title %}Report a Defect{% endblock %}
+{% block content %}
+
+<div style="max-width:740px;">
+  <div style="margin-bottom:24px;">
+    <h1 style="font-size:22px;font-weight:700;margin-bottom:5px;">Report a Product Defect</h1>
+    <p style="color:var(--text2);font-size:13px;">Your complaint will be sent to admin for review. Admin will assign it to the right team based on the defect type. <strong>A photo is required.</strong></p>
+  </div>
+
+  <!-- Flow indicator -->
+  <div class="card" style="margin-bottom:22px;border-color:var(--accent);background:rgba(124,58,237,.05);">
+    <div style="display:flex;align-items:center;justify-content:space-around;flex-wrap:wrap;gap:8px;">
+      <div style="text-align:center;padding:8px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;margin:0 auto 6px;">1</div>
+        <div style="font-size:11px;font-weight:600;">You Submit</div>
+        <div style="font-size:10px;color:var(--text2);">With photo</div>
+      </div>
+      <div style="color:var(--accent2);font-size:20px;">→</div>
+      <div style="text-align:center;padding:8px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;margin:0 auto 6px;">2</div>
+        <div style="font-size:11px;font-weight:600;">Admin Reviews</div>
+        <div style="font-size:10px;color:var(--text2);">Checks complaint</div>
+      </div>
+      <div style="color:var(--accent2);font-size:20px;">→</div>
+      <div style="text-align:center;padding:8px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;margin:0 auto 6px;">3</div>
+        <div style="font-size:11px;font-weight:600;">Admin Assigns</div>
+        <div style="font-size:10px;color:var(--text2);">To correct team</div>
+      </div>
+      <div style="color:var(--accent2);font-size:20px;">→</div>
+      <div style="text-align:center;padding:8px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;margin:0 auto 6px;">4</div>
+        <div style="font-size:11px;font-weight:600;">Gets Fixed</div>
+        <div style="font-size:10px;color:var(--text2);">Marked resolved</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <form method="post" enctype="multipart/form-data" id="complaintForm">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-left:3px solid var(--red);border-radius:6px;padding:10px 14px;color:#f87171;font-size:13px;margin-bottom:18px;">
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+
+      <div class="g2">
+        <div class="form-group">
+          <label>Complaint Title *</label>
+          {{ form.title }}
+          {% if form.title.errors %}<ul class="field-err">{% for e in form.title.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+        <div class="form-group">
+          <label>Product Name *</label>
+          {{ form.product_name }}
+          {% if form.product_name.errors %}<ul class="field-err">{% for e in form.product_name.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+      </div>
+
+      <!-- Admin-assigned notice -->
+      <div style="background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.3);border-left:3px solid var(--orange);border-radius:6px;padding:12px 16px;margin-bottom:18px;display:flex;align-items:flex-start;gap:10px;">
+        <span style="font-size:18px;">🔍</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--orange);margin-bottom:2px;">Defect Type &amp; Priority — Decided by Admin</div>
+          <div style="font-size:12px;color:var(--text2);">After you submit, an admin will review your report and classify the defect type and priority level before assigning it to the right team.</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Order / Invoice Number</label>
+        {{ form.order_number }}
+      </div>
+
+      <div class="form-group">
+        <label>Detailed Description *</label>
+        {{ form.description }}
+        {% if form.description.errors %}<ul class="field-err">{% for e in form.description.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <!-- IMAGE UPLOAD — REQUIRED -->
+      <div class="form-group">
+        <label>📸 Photo Evidence (Required) *</label>
+        <div id="dropZone" style="border:2px dashed var(--accent);border-radius:10px;padding:30px;text-align:center;cursor:pointer;background:rgba(124,58,237,.04);transition:all .2s;" onclick="document.getElementById('imageInput').click()">
+          <div id="dropContent">
+            <div style="font-size:36px;margin-bottom:10px;">📷</div>
+            <div style="font-size:14px;font-weight:600;color:var(--accent2);margin-bottom:4px;">Click to upload photo</div>
+            <div style="font-size:12px;color:var(--text2);">JPG, PNG, GIF — clear photo of the defect or error screenshot</div>
+          </div>
+          <img id="previewImg" src="" alt="Preview" style="display:none;max-width:100%;max-height:240px;border-radius:8px;margin-top:10px;">
+        </div>
+        <input type="file" id="imageInput" name="image" accept="image/*" style="display:none;" required>
+        {% if form.image.errors %}<ul class="field-err">{% for e in form.image.errors %}<li>⚠ {{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <button type="submit" class="btn btn-primary">⊕ Submit Complaint</button>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const input  = document.getElementById('imageInput');
+const zone   = document.getElementById('dropZone');
+const prev   = document.getElementById('previewImg');
+const dc     = document.getElementById('dropContent');
+
+input.addEventListener('change', function() {
+  if (this.files && this.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      prev.src = e.target.result;
+      prev.style.display = 'block';
+      dc.style.display = 'none';
+      zone.style.borderStyle = 'solid';
+      zone.style.borderColor = 'var(--green)';
+    };
+    reader.readAsDataURL(this.files[0]);
+  }
+});
+
+// Drag and drop
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.background='rgba(124,58,237,.12)'; });
+zone.addEventListener('dragleave', () => { zone.style.background='rgba(124,58,237,.04)'; });
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.style.background='rgba(124,58,237,.04)';
+  const files = e.dataTransfer.files;
+  if (files.length) {
+    input.files = files;
+    input.dispatchEvent(new Event('change'));
+  }
+});
+
+// Validate image on submit
+document.getElementById('complaintForm').addEventListener('submit', function(e) {
+  if (!input.files || !input.files[0]) {
+    e.preventDefault();
+    zone.style.borderColor = 'var(--red)';
+    zone.scrollIntoView({behavior:'smooth'});
+    alert('Please upload a photo of the defect before submitting.');
+  }
+});
+</script>
+{% endblock %}

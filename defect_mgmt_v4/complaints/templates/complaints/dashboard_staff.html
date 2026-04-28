@@ -1,0 +1,252 @@
+{% extends 'complaints/base.html' %}
+{% block title %}{{ role_label }} Dashboard — DefectTrack{% endblock %}
+{% block page_title %}{{ role_label }} Dashboard{% endblock %}
+{% block content %}
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     CONGRATS POPUP — shows once per new reward, then auto-dismisses
+     ═══════════════════════════════════════════════════════════════════════════ -->
+{% if new_rewards %}
+<div id="reward-overlay" style="
+  position:fixed;inset:0;z-index:9999;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
+  animation:fadeIn .3s ease;">
+
+  <div id="reward-modal" style="
+    background:var(--bg2);border:2px solid #f59e0b;border-radius:20px;
+    padding:40px 36px;max-width:440px;width:92%;text-align:center;
+    box-shadow:0 0 60px rgba(245,158,11,.4);
+    animation:popIn .4s cubic-bezier(.175,.885,.32,1.275);">
+
+    <!-- Stars / confetti row -->
+    <div style="font-size:48px;margin-bottom:8px;line-height:1;">🎉</div>
+
+    <div style="font-size:22px;font-weight:800;color:#f59e0b;margin-bottom:6px;">
+      Congratulations!
+    </div>
+    <div style="font-size:14px;color:var(--text2);margin-bottom:20px;">
+      You resolved {% if new_rewards|length == 1 %}a defect{% else %}{{ new_rewards|length }} defects{% endif %} and earned a reward!
+    </div>
+
+    {% for r in new_rewards %}
+    <div style="
+      background:linear-gradient(135deg,#f59e0b22,#fbbf2422);
+      border:1px solid #f59e0b55;border-radius:14px;
+      padding:18px 24px;margin-bottom:12px;">
+      <div style="font-size:32px;font-weight:900;color:#f59e0b;letter-spacing:-1px;">
+        ₹{{ r.amount|floatformat:0 }}
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px;">
+        Awarded for resolving <strong style="color:var(--text);">{{ r.complaint.complaint_id }}</strong>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:2px;">
+        {{ r.complaint.title|truncatechars:50 }}
+      </div>
+    </div>
+    {% endfor %}
+
+    <div style="font-size:13px;color:var(--text2);margin:16px 0 20px;">
+      Your total earnings: <strong style="color:#f59e0b;font-size:16px;">₹{{ total_earned|floatformat:0 }}</strong>
+    </div>
+
+    <button onclick="document.getElementById('reward-overlay').style.display='none'"
+      style="background:#f59e0b;color:#000;border:none;border-radius:10px;
+        padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer;
+        transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+      🎊 Awesome, thanks!
+    </button>
+  </div>
+</div>
+
+<style>
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes popIn  { from{opacity:0;transform:scale(.7)} to{opacity:1;transform:scale(1)} }
+</style>
+{% endif %}
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     HEADER
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div style="margin-bottom:24px;">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;flex-wrap:wrap;">
+    <h1 style="font-size:20px;font-weight:700;">Welcome, {{ request.user.get_full_name|default:request.user.username }}</h1>
+    <span class="role-chip r-{{ profile.role }}" style="font-size:12px;padding:4px 14px;">{{ role_label }}</span>
+  </div>
+  <p style="color:var(--text2);font-size:13px;">Complaints assigned to you by admin are listed below. Resolve them to earn ₹{{ reward_amount|floatformat:0 }} rewards!</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     REWARD BANNER (persistent, always visible)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div style="
+  background:linear-gradient(135deg,#1a1200,#2a1a00);
+  border:1px solid #f59e0b55;border-radius:14px;
+  padding:20px 24px;margin-bottom:20px;
+  display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+
+  <div style="font-size:36px;">🏆</div>
+
+  <div style="flex:1;min-width:180px;">
+    <div style="font-size:11px;color:#f59e0b;font-weight:600;letter-spacing:.05em;text-transform:uppercase;">Your Reward Balance</div>
+    <div style="font-size:28px;font-weight:900;color:#f59e0b;letter-spacing:-1px;margin-top:2px;">
+      ₹{{ total_earned|floatformat:0 }}
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-top:3px;">
+      {{ reward_count }} defect{{ reward_count|pluralize }} resolved · ₹{{ reward_amount|floatformat:0 }} per resolve
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <a href="{% url 'leaderboard' %}" style="
+      background:#f59e0b;color:#000;text-decoration:none;
+      border-radius:8px;padding:10px 18px;font-size:13px;font-weight:700;
+      display:inline-flex;align-items:center;gap:6px;">
+      🏅 View Leaderboard
+    </a>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     STATS GRID
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="stats-grid">
+  <div class="stat"><div class="stat-icon">📋</div><div class="stat-val">{{ stats.total }}</div><div class="stat-lbl">Total Assigned</div></div>
+  <div class="stat c-yellow"><div class="stat-icon">📬</div><div class="stat-val">{{ stats.open }}</div><div class="stat-lbl">Open / New</div></div>
+  <div class="stat c-blue"><div class="stat-icon">🔄</div><div class="stat-val">{{ stats.in_progress }}</div><div class="stat-lbl">In Progress</div></div>
+  <div class="stat c-green"><div class="stat-icon">✅</div><div class="stat-val">{{ stats.resolved }}</div><div class="stat-lbl">Resolved</div></div>
+  <div class="stat c-red"><div class="stat-icon">🚨</div><div class="stat-val">{{ stats.critical }}</div><div class="stat-lbl">Critical</div></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     ASSIGNED COMPLAINTS
+     ═══════════════════════════════════════════════════════════════════════════ -->
+{% if assigned_complaints %}
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <div class="card-title" style="margin-bottom:0;">My Assigned Complaints</div>
+    <a href="{% url 'complaint_list' %}" class="btn btn-outline btn-sm">View All</a>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    {% for c in assigned_complaints %}
+    <a href="{% url 'complaint_detail' c.pk %}" style="text-decoration:none;">
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px;
+      display:flex;align-items:center;gap:16px;flex-wrap:wrap;transition:border-color .15s;"
+      onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)'">
+
+      <div style="width:4px;height:48px;border-radius:2px;flex-shrink:0;
+        background:{% if c.priority == 'critical' %}var(--red){% elif c.priority == 'high' %}var(--orange){% elif c.priority == 'medium' %}var(--yellow){% else %}var(--green){% endif %};">
+      </div>
+
+      <div style="flex:1;min-width:160px;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;">{{ c.title|truncatechars:55 }}</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="cid">{{ c.complaint_id }}</span>
+          <span style="font-size:11px;color:var(--text2);">📦 {{ c.product_name }}</span>
+          {% if c.defect_category %}
+          <span style="font-size:11px;color:var(--text2);">{{ c.defect_category.icon }} {{ c.defect_category.name }}</span>
+          {% endif %}
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px;">
+          Reported by: <strong style="color:var(--text);">{{ c.raised_by.get_full_name|default:c.raised_by.username }}</strong>
+          &nbsp;·&nbsp; {{ c.created_at|date:"M d, Y" }}
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;">
+        <span class="badge b-{{ c.priority }}">{{ c.priority }}</span>
+        <span class="badge b-{{ c.status }}">{{ c.get_status_display }}</span>
+        {% if c.status != 'resolved' and c.status != 'closed' %}
+        <span style="font-size:10px;color:#f59e0b;margin-top:2px;">Resolve → earn ₹{{ reward_amount|floatformat:0 }} 🏆</span>
+        {% else %}
+        <span style="font-size:10px;color:var(--green);margin-top:2px;">✅ Rewarded</span>
+        {% endif %}
+      </div>
+    </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if stats.total > 15 %}
+  <div style="margin-top:14px;">
+    <a href="{% url 'complaint_list' %}" class="btn btn-outline btn-sm">View All {{ stats.total }} →</a>
+  </div>
+  {% endif %}
+</div>
+
+{% else %}
+<div class="card">
+  <div class="empty">
+    <div class="eico">🎉</div>
+    <h3>No complaints assigned to you yet</h3>
+    <p>When admin assigns complaints to you, they'll appear here. Resolve them to earn ₹{{ reward_amount|floatformat:0 }} rewards!</p>
+  </div>
+</div>
+{% endif %}
+
+<!-- Role tips -->
+<div class="card" style="margin-top:16px;">
+  <div class="card-title">Your Responsibilities as {{ role_label }}</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+    {% if profile.role == 'developer' %}
+    <div style="background:var(--bg3);border-radius:8px;padding:14px;">
+      <div style="font-size:20px;margin-bottom:6px;">🐛</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Software Bugs</div>
+      <div style="font-size:12px;color:var(--text2);">Fix crashes, errors, and incorrect behavior in code</div>
+    </div>
+    {% elif profile.role == 'designer' %}
+    <div style="background:var(--bg3);border-radius:8px;padding:14px;">
+      <div style="font-size:20px;margin-bottom:6px;">🎨</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;">UI/UX Issues</div>
+      <div style="font-size:12px;color:var(--text2);">Fix layout, visual design, and experience problems</div>
+    </div>
+    {% elif profile.role == 'tester' %}
+    <div style="background:var(--bg3);border-radius:8px;padding:14px;">
+      <div style="font-size:20px;margin-bottom:6px;">⚙️</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Functionality Failures</div>
+      <div style="font-size:12px;color:var(--text2);">Investigate features that are broken or misbehaving</div>
+    </div>
+    {% elif profile.role == 'qa_engineer' %}
+    <div style="background:var(--bg3);border-radius:8px;padding:14px;">
+      <div style="font-size:20px;margin-bottom:6px;">🔒</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Security &amp; Compatibility</div>
+      <div style="font-size:12px;color:var(--text2);">Investigate security flaws and platform compatibility</div>
+    </div>
+    {% elif profile.role == 'product_manager' %}
+    <div style="background:var(--bg3);border-radius:8px;padding:14px;">
+      <div style="font-size:20px;margin-bottom:6px;">📦</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Physical Damage</div>
+      <div style="font-size:12px;color:var(--text2);">Handle physical product defects and replacements</div>
+    </div>
+    {% elif profile.role == 'support' %}
+    <div style="background:var(--bg3);border-radius:8px;padding:14px;">
+      <div style="font-size:20px;margin-bottom:6px;">📄</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Documentation &amp; Support</div>
+      <div style="font-size:12px;color:var(--text2);">Fix documentation errors, assist customers</div>
+    </div>
+    {% endif %}
+
+    <div style="background:var(--bg3);border-radius:8px;padding:14px;">
+      <div style="font-size:20px;margin-bottom:6px;">📝</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;">How to earn rewards</div>
+      <div style="font-size:12px;color:var(--text2);">
+        Click any complaint → add a note → set status to
+        <strong style="color:var(--blue);">In Progress</strong> while working, then
+        <strong style="color:var(--green);">Resolved</strong> when done.
+        You instantly earn <strong style="color:#f59e0b;">₹{{ reward_amount|floatformat:0 }}</strong> per resolved defect!
+      </div>
+    </div>
+
+    <div style="background:var(--bg3);border-radius:8px;padding:14px;">
+      <div style="font-size:20px;margin-bottom:6px;">⚡</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px;">Quick Filters</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+        <a href="{% url 'complaint_list' %}?priority=critical" class="btn btn-danger btn-sm" style="justify-content:center;">🚨 Critical First</a>
+        <a href="{% url 'complaint_list' %}?status=assigned"   class="btn btn-outline btn-sm" style="justify-content:center;">📬 New Assignments</a>
+        <a href="{% url 'leaderboard' %}"                      class="btn btn-outline btn-sm" style="justify-content:center;">🏅 Leaderboard</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

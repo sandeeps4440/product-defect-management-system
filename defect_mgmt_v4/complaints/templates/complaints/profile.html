@@ -1,0 +1,78 @@
+{% extends 'complaints/base.html' %}
+{% block title %}My Profile — DefectTrack{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+{% block content %}
+<div style="max-width:560px;">
+  <div style="margin-bottom:22px;">
+    <h1 style="font-size:20px;font-weight:700;">My Profile</h1>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:18px;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:20px;">
+      <div class="avatar" style="width:60px;height:60px;font-size:20px;background:{{ profile.avatar_color|default:'#6366f1' }};">
+        {{ request.user.username|slice:":2"|upper }}
+      </div>
+      <div>
+        <div style="font-size:18px;font-weight:700;">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px;">{{ request.user.email|default:"No email set" }}</div>
+        <span class="role-chip r-{{ profile.role }}" style="margin-top:8px;display:inline-flex;font-size:11px;padding:4px 12px;">
+          {{ profile.get_role_display }}
+        </span>
+      </div>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="g2">
+        <div class="form-group">
+          <label>First Name</label>
+          <input type="text" name="first_name" value="{{ request.user.first_name }}" placeholder="First name">
+        </div>
+        <div class="form-group">
+          <label>Last Name</label>
+          <input type="text" name="last_name" value="{{ request.user.last_name }}" placeholder="Last name">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" name="email" value="{{ request.user.email }}" placeholder="your@email.com">
+      </div>
+      <div class="g2">
+        <div class="form-group">
+          <label>Phone</label>
+          {{ form.phone }}
+        </div>
+        <div class="form-group">
+          <label>Department</label>
+          {{ form.department }}
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-title">My Activity</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;text-align:center;">
+      <div style="background:var(--bg3);border-radius:8px;padding:16px;">
+        <div style="font-family:'Space Mono',monospace;font-size:26px;font-weight:700;color:var(--accent2);">
+          {{ request.user.complaints_raised.count }}
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px;">Reported</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:8px;padding:16px;">
+        <div style="font-family:'Space Mono',monospace;font-size:26px;font-weight:700;color:var(--green);">
+          {{ request.user.complaints_assigned.count }}
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px;">Assigned</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:8px;padding:16px;">
+        <div style="font-family:'Space Mono',monospace;font-size:26px;font-weight:700;color:var(--yellow);">
+          {{ request.user.complaintupdated_set.count|default:0 }}
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px;">Updates</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

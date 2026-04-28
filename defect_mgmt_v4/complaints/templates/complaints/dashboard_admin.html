@@ -1,0 +1,246 @@
+{% extends 'complaints/base.html' %}
+{% block title %}Admin Dashboard — DefectTrack{% endblock %}
+{% block page_title %}Admin Control Centre{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:24px;">
+  <h1 style="font-size:20px;font-weight:700;">Admin Control Centre</h1>
+  <p style="color:var(--text2);font-size:13px;margin-top:3px;">Review incoming complaints, identify whose fault it is, and assign to the right team member.</p>
+</div>
+
+<div class="stats-grid">
+  <div class="stat"><div class="stat-icon">📊</div><div class="stat-val">{{ stats.total }}</div><div class="stat-lbl">Total Complaints</div></div>
+  <div class="stat c-orange"><div class="stat-icon">🔔</div><div class="stat-val">{{ stats.pending }}</div><div class="stat-lbl">Pending Review</div></div>
+  <div class="stat c-blue"><div class="stat-icon">🔄</div><div class="stat-val">{{ stats.in_progress }}</div><div class="stat-lbl">In Progress</div></div>
+  <div class="stat c-green"><div class="stat-icon">✅</div><div class="stat-val">{{ stats.resolved }}</div><div class="stat-lbl">Resolved</div></div>
+  <div class="stat c-red"><div class="stat-icon">🚨</div><div class="stat-val">{{ stats.critical }}</div><div class="stat-lbl">Critical</div></div>
+</div>
+
+<!-- PENDING REVIEW QUEUE -->
+{% if pending_review %}
+<div class="card" style="margin-bottom:20px;border-color:var(--orange);background:rgba(249,115,22,.04);">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <div class="card-title" style="color:var(--orange);margin-bottom:0;">🔔 Pending Your Review — {{ stats.pending }} complaint{{ stats.pending|pluralize }}</div>
+    <a href="{% url 'complaint_list' %}?status=pending" class="btn btn-outline btn-sm">View All Pending</a>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Title</th>
+          <th>Product</th>
+          <th>From</th>
+          <th>Category (Fault)</th>
+          <th>Priority</th>
+          <th>Submitted</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in pending_review %}
+        <tr>
+          <td><span class="cid">{{ c.complaint_id }}</span></td>
+          <td style="font-weight:600;font-size:13px;max-width:180px;">{{ c.title|truncatechars:30 }}</td>
+          <td style="font-size:12px;color:var(--text2);">{{ c.product_name }}</td>
+          <td>
+            <div style="font-size:12px;font-weight:500;">{{ c.raised_by.get_full_name|default:c.raised_by.username }}</div>
+            <span class="role-chip r-customer">Customer</span>
+          </td>
+          <td>
+            {% if c.defect_category %}
+            <div style="display:flex;align-items:center;gap:5px;">
+              <span style="font-size:14px;">{{ c.defect_category.icon }}</span>
+              <div>
+                <div style="font-size:12px;font-weight:600;">{{ c.defect_category.name }}</div>
+                <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
+                  <span style="font-size:10px;color:var(--text2);">Fault →</span>
+                  <span class="role-chip r-{{ c.defect_category.suggested_role }}">{{ c.defect_category.get_suggested_role_display }}</span>
+                </div>
+              </div>
+            </div>
+            {% else %}
+            <span style="color:var(--text2);font-size:12px;">Not categorised</span>
+            {% endif %}
+          </td>
+          <td><span class="badge b-{{ c.priority }}">{{ c.priority }}</span></td>
+          <td style="font-size:11px;color:var(--text2);font-family:'Space Mono',monospace;white-space:nowrap;">{{ c.created_at|date:"M d, H:i" }}</td>
+          <td>
+            <a href="{% url 'complaint_detail' c.pk %}" class="btn btn-primary btn-sm">Review & Assign →</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card" style="margin-bottom:20px;border-color:var(--green);background:rgba(16,185,129,.04);padding:16px;">
+  <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#34d399;">
+    <span style="font-size:20px;">✅</span>
+    <span>No complaints pending review — all caught up!</span>
+  </div>
+</div>
+{% endif %}
+
+<!-- FAULT MAP — who is responsible for what -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-title">🔍 Fault Detection Map — Category → Responsible Team</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+    {% for item in cat_stats %}
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:24px;flex-shrink:0;">{{ item.cat.icon }}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;margin-bottom:4px;">{{ item.cat.name }}</div>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <span style="font-size:10px;color:var(--text2);">Fault:</span>
+          <span class="role-chip r-{{ item.cat.suggested_role }}">{{ item.cat.get_suggested_role_display }}</span>
+        </div>
+      </div>
+      <div style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;
+        color:{% if item.count > 3 %}var(--red){% elif item.count > 1 %}var(--yellow){% else %}var(--green){% endif %}">
+        {{ item.count }}
+      </div>
+    </div>
+    {% empty %}
+    <div style="color:var(--text2);font-size:13px;grid-column:1/-1;text-align:center;padding:16px;">No complaints yet</div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="g2" style="align-items:start;">
+
+  <!-- All complaints -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div class="card-title" style="margin-bottom:0;">All Recent Complaints</div>
+      <a href="{% url 'complaint_list' %}" class="btn btn-outline btn-sm">View All</a>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Title</th><th>Fault / Assigned To</th><th>Priority</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for c in all_complaints %}
+          <tr onclick="location='{% url 'complaint_detail' c.pk %}'">
+            <td><span class="cid">{{ c.complaint_id }}</span></td>
+            <td>
+              <div style="font-weight:600;font-size:12px;">{{ c.title|truncatechars:28 }}</div>
+              <div style="font-size:10px;color:var(--text2);">{{ c.product_name }}</div>
+            </td>
+            <td>
+              {% if c.defect_category %}
+              <div style="font-size:11px;color:var(--text2);margin-bottom:3px;">{{ c.defect_category.icon }} {{ c.defect_category.name }}</div>
+              {% endif %}
+              {% if c.assigned_to %}
+              <div style="display:flex;align-items:center;gap:4px;">
+                <div class="avatar" style="width:16px;height:16px;font-size:7px;background:{{ c.assigned_to.profile.avatar_color|default:'#6366f1' }}">{{ c.assigned_to.username|slice:":1"|upper }}</div>
+                <span class="role-chip r-{{ c.assigned_to.profile.role }}">{{ c.assigned_to.profile.get_role_display }}</span>
+              </div>
+              {% elif c.status == 'pending' %}
+              <span style="font-size:10px;color:var(--orange);">⏳ Needs assignment</span>
+              {% endif %}
+            </td>
+            <td><span class="badge b-{{ c.priority }}">{{ c.priority }}</span></td>
+            <td><span class="badge b-{{ c.status }}">{{ c.get_status_display }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Staff workload -->
+  <div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">Staff Workload (Active Assignments)</div>
+      {% for u in staff_load %}
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+        <div class="avatar" style="width:32px;height:32px;font-size:11px;background:{{ u.profile.avatar_color|default:'#6366f1' }}">{{ u.username|slice:":2"|upper }}</div>
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:600;">{{ u.get_full_name|default:u.username }}</div>
+          <span class="role-chip r-{{ u.profile.role }}">{{ u.profile.get_role_display }}</span>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;
+            color:{% if u.open_count > 3 %}var(--red){% elif u.open_count > 1 %}var(--yellow){% else %}var(--green){% endif %}">
+            {{ u.open_count }}
+          </div>
+          <div style="font-size:9px;color:var(--text2);">active</div>
+        </div>
+      </div>
+      {% empty %}
+      <div style="color:var(--text2);font-size:13px;text-align:center;padding:16px;">No active assignments</div>
+      {% endfor %}
+    </div>
+
+    
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     REWARDS LEADERBOARD
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="card" style="margin-bottom:20px;border-color:#f59e0b55;background:linear-gradient(135deg,rgba(245,158,11,.04),transparent);">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+    <div>
+      <div class="card-title" style="color:#f59e0b;margin-bottom:2px;">🏆 Rewards Leaderboard</div>
+      <div style="font-size:12px;color:var(--text2);">Staff earn ₹{{ reward_amount|floatformat:0 }} per resolved defect · Total paid out: <strong style="color:#f59e0b;">₹{{ total_rewards_paid|floatformat:0 }}</strong></div>
+    </div>
+    <a href="{% url 'leaderboard' %}" class="btn btn-outline btn-sm" style="border-color:#f59e0b;color:#f59e0b;">View Full Leaderboard →</a>
+  </div>
+
+  {% if leaderboard %}
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    {% for emp in leaderboard %}
+    <div style="
+      background:{% if forloop.counter == 1 %}linear-gradient(135deg,#1a1200,#2a1800){% else %}var(--bg3){% endif %};
+      border:1px solid {% if forloop.counter == 1 %}#f59e0b66{% else %}var(--border){% endif %};
+      border-radius:10px;padding:12px 16px;
+      display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+
+      <div style="width:32px;text-align:center;font-size:{% if forloop.counter <= 3 %}22px{% else %}13px{% endif %};font-weight:800;color:var(--text2);">
+        {% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% elif forloop.counter == 3 %}🥉{% else %}#{{ forloop.counter }}{% endif %}
+      </div>
+
+      <div style="width:36px;height:36px;border-radius:50%;flex-shrink:0;
+        background:{{ emp.profile.avatar_color }};
+        display:flex;align-items:center;justify-content:center;
+        font-size:14px;font-weight:700;color:#fff;">
+        {{ emp.get_full_name|default:emp.username|first|upper }}
+      </div>
+
+      <div style="flex:1;min-width:100px;">
+        <div style="font-size:13px;font-weight:700;">{{ emp.get_full_name|default:emp.username }}</div>
+        <span class="role-chip r-{{ emp.profile.role }}" style="font-size:10px;margin-top:2px;display:inline-block;">{{ emp.profile.get_role_display }}</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+        <div style="text-align:center;">
+          <div style="font-size:18px;font-weight:800;">{{ emp.resolved_count }}</div>
+          <div style="font-size:10px;color:var(--text2);">resolved</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:16px;font-weight:800;color:{% if forloop.counter == 1 %}#f59e0b{% else %}#10b981{% endif %};">₹{{ emp.total_earned|floatformat:0 }}</div>
+          <div style="font-size:10px;color:var(--text2);">earned</div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:20px;color:var(--text2);font-size:13px;">
+    No rewards given yet. Staff earn ₹{{ reward_amount|floatformat:0 }} when they resolve their first defect.
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+      <div class="card-title">Quick Links</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <a href="{% url 'complaint_list' %}?status=pending"     class="btn btn-outline" style="justify-content:center;border-color:var(--orange);color:var(--orange);">🔔 Pending Review</a>
+        <a href="{% url 'complaint_list' %}?priority=critical"  class="btn btn-outline" style="justify-content:center;border-color:var(--red);color:#f87171;">🚨 Critical Defects</a>
+        <a href="{% url 'complaint_list' %}?status=in_progress" class="btn btn-outline" style="justify-content:center;">🔄 In Progress</a>
+        <a href="{% url 'analytics' %}"                         class="btn btn-outline" style="justify-content:center;">◉ Full Analytics</a>
+        <a href="{% url 'leaderboard' %}"                         class="btn btn-outline" style="justify-content:center;border-color:#f59e0b;color:#f59e0b;">🏆 Leaderboard</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

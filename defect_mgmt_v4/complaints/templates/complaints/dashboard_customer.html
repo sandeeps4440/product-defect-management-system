@@ -1,0 +1,142 @@
+{% extends 'complaints/base.html' %}
+{% block title %}My Dashboard — DefectTrack{% endblock %}
+{% block page_title %}My Dashboard{% endblock %}
+{% block content %}
+
+<div style="margin-bottom:24px;">
+  <h1 style="font-size:20px;font-weight:700;">Welcome back, {{ request.user.get_full_name|default:request.user.username }} 👋</h1>
+  <p style="color:var(--text2);font-size:13px;margin-top:3px;">Track all your reported defects and see who is working on them.</p>
+</div>
+
+<!-- NOTIFICATIONS BANNER -->
+{% if unread_notifs %}
+<div style="margin-bottom:20px;">
+  {% for notif in unread_notifs %}
+  <div style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.35);border-left:4px solid var(--accent2);border-radius:10px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;">
+    <span style="font-size:18px;flex-shrink:0;">🔔</span>
+    <div style="flex:1;">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;">Update on your complaint</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;">{{ notif.message }}</div>
+      <div style="margin-top:6px;display:flex;align-items:center;gap:10px;">
+        <a href="{% url 'complaint_detail' notif.complaint.pk %}" class="btn btn-primary btn-sm">View Complaint →</a>
+        <span style="font-size:10px;color:var(--text2);font-family:'Space Mono',monospace;">{{ notif.created_at|date:"M d, H:i" }}</span>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  <a href="{% url 'mark_notifs_read' %}" style="font-size:11px;color:var(--text2);text-decoration:none;">Mark all as read ✓</a>
+</div>
+{% endif %}
+
+<div class="stats-grid">
+  <div class="stat"><div class="stat-icon">📋</div><div class="stat-val">{{ stats.total }}</div><div class="stat-lbl">Total Reported</div></div>
+  <div class="stat c-yellow"><div class="stat-icon">⏳</div><div class="stat-val">{{ stats.pending }}</div><div class="stat-lbl">Pending Review</div></div>
+  <div class="stat c-blue"><div class="stat-icon">🔄</div><div class="stat-val">{{ stats.in_progress }}</div><div class="stat-lbl">In Progress</div></div>
+  <div class="stat c-green"><div class="stat-icon">✅</div><div class="stat-val">{{ stats.resolved }}</div><div class="stat-lbl">Resolved</div></div>
+</div>
+
+{% if recent %}
+<div class="card" style="margin-bottom:20px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <div class="card-title" style="margin-bottom:0;">My Complaints — Live Status</div>
+    <a href="{% url 'raise_complaint' %}" class="btn btn-primary btn-sm">⊕ Report New</a>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    {% for c in recent %}
+    <a href="{% url 'complaint_detail' c.pk %}" style="text-decoration:none;">
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;transition:border-color .15s;"
+      onmouseover="this.style.borderColor='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)'">
+
+      <!-- Status dot -->
+      <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;
+        background:{% if c.status == 'pending' %}var(--yellow){% elif c.status == 'assigned' %}var(--blue){% elif c.status == 'in_progress' %}var(--accent2){% elif c.status == 'resolved' %}var(--green){% else %}var(--text3){% endif %};
+        box-shadow:{% if c.status == 'in_progress' %}0 0 8px var(--accent2){% elif c.status == 'resolved' %}0 0 8px var(--green){% else %}none{% endif %};">
+      </div>
+
+      <div style="flex:1;min-width:160px;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px;">{{ c.title|truncatechars:50 }}</div>
+        <div style="font-size:11px;color:var(--text2);">📦 {{ c.product_name }} &nbsp;·&nbsp; <span class="cid">{{ c.complaint_id }}</span></div>
+      </div>
+
+      <!-- Who is handling it -->
+      <div style="flex-shrink:0;text-align:right;min-width:160px;">
+        {% if c.status == 'pending' %}
+          <div style="font-size:11px;color:var(--orange);font-weight:600;">⏳ Awaiting Admin Review</div>
+          <div style="font-size:10px;color:var(--text2);">Admin will assign to correct team</div>
+        {% elif c.status == 'assigned' or c.status == 'in_progress' %}
+          {% if c.assigned_to %}
+          <div style="font-size:10px;color:var(--text2);margin-bottom:4px;">{% if c.status == 'in_progress' %}🔄 Being worked on by{% else %}✅ Assigned to{% endif %}</div>
+          <div style="display:flex;align-items:center;gap:7px;justify-content:flex-end;">
+            <div class="avatar" style="width:26px;height:26px;font-size:9px;background:{{ c.assigned_to.profile.avatar_color|default:'#6366f1' }}">{{ c.assigned_to.username|slice:":2"|upper }}</div>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:var(--text);">{{ c.assigned_to.get_full_name|default:c.assigned_to.username }}</div>
+              <span class="role-chip r-{{ c.assigned_to.profile.role }}">{{ c.assigned_to.profile.get_role_display }}</span>
+            </div>
+          </div>
+          {% if c.defect_category %}
+          <div style="font-size:10px;color:var(--text2);margin-top:4px;">Fault: {{ c.defect_category.icon }} {{ c.defect_category.name }}</div>
+          {% endif %}
+          {% endif %}
+        {% elif c.status == 'resolved' %}
+          <div style="font-size:12px;color:var(--green);font-weight:700;">✅ Resolved!</div>
+          {% if c.assigned_to %}<div style="font-size:10px;color:var(--text2);">Fixed by {{ c.assigned_to.get_full_name|default:c.assigned_to.username }}</div>{% endif %}
+          {% if c.resolved_at %}<div style="font-size:10px;color:var(--text2);font-family:'Space Mono',monospace;">{{ c.resolved_at|date:"M d, Y" }}</div>{% endif %}
+        {% elif c.status == 'closed' %}
+          <div style="font-size:11px;color:var(--text2);font-weight:600;">🔒 Closed</div>
+        {% elif c.status == 'rejected' %}
+          <div style="font-size:11px;color:#f87171;font-weight:600;">❌ Rejected</div>
+        {% endif %}
+      </div>
+
+      <div style="flex-shrink:0;display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+        <span class="badge b-{{ c.priority }}">{{ c.priority }}</span>
+        <span class="badge b-{{ c.status }}">{{ c.get_status_display }}</span>
+      </div>
+    </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% if stats.total > 8 %}
+  <div style="margin-top:14px;"><a href="{% url 'complaint_list' %}" class="btn btn-outline btn-sm">View All {{ stats.total }} →</a></div>
+  {% endif %}
+</div>
+{% else %}
+<div class="card" style="margin-bottom:20px;">
+  <div class="empty">
+    <div class="eico">📭</div>
+    <h3>No complaints reported yet</h3>
+    <p>Report a defect and track exactly who is fixing it.</p>
+    <div style="margin-top:20px;"><a href="{% url 'raise_complaint' %}" class="btn btn-primary">⊕ Report First Defect</a></div>
+  </div>
+</div>
+{% endif %}
+
+<div class="g2">
+  <div class="card" style="border-color:var(--accent);background:rgba(124,58,237,.04);">
+    <div class="card-title" style="color:var(--accent2);">⚡ Report a New Defect</div>
+    <p style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:16px;">Received a defective product? Submit with a photo — admin will identify whose fault it is and assign to the right team.</p>
+    <a href="{% url 'raise_complaint' %}" class="btn btn-primary" style="width:100%;justify-content:center;">⊕ Report Defect Now</a>
+  </div>
+  <div class="card">
+    <div class="card-title">How It Works</div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;gap:10px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(124,58,237,.2);color:var(--accent2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;">1</div>
+        <div><div style="font-size:13px;font-weight:600;">You report the defect</div><div style="font-size:11px;color:var(--text2);">With photo evidence → Status: Pending Review</div></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(249,115,22,.2);color:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;">2</div>
+        <div><div style="font-size:13px;font-weight:600;">Admin identifies the fault</div><div style="font-size:11px;color:var(--text2);">Developer, designer, tester fault — assigns accordingly</div></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(99,102,241,.2);color:#818cf8;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;">3</div>
+        <div><div style="font-size:13px;font-weight:600;">You're notified &amp; can track</div><div style="font-size:11px;color:var(--text2);">🔔 Bell icon shows updates, you see who's working on it</div></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div style="width:26px;height:26px;border-radius:50%;background:rgba(16,185,129,.2);color:var(--green);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;">4</div>
+        <div><div style="font-size:13px;font-weight:600;">Resolved with full history</div><div style="font-size:11px;color:var(--text2);">See every update in the activity timeline</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

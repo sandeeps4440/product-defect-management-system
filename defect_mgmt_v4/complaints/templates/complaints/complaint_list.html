@@ -1,0 +1,143 @@
+{% extends 'complaints/base.html' %}
+{% block title %}Defect Complaints — DefectTrack{% endblock %}
+{% block page_title %}Defect Complaints{% endblock %}
+{% block content %}
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 style="font-size:20px;font-weight:700;">
+      {% if profile.role == 'admin' %}All Defect Complaints
+      {% elif profile.role == 'customer' %}My Complaints
+      {% else %}My Assigned Complaints{% endif %}
+    </h1>
+    <p style="color:var(--text2);font-size:12px;margin-top:2px;">{{ complaints|length }} complaint{{ complaints|length|pluralize }}</p>
+  </div>
+  {% if profile.role == 'customer' %}
+  <a href="{% url 'raise_complaint' %}" class="btn btn-primary">⊕ Report Defect</a>
+  {% endif %}
+</div>
+
+<!-- Filters -->
+<form method="get">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center;">
+    <input type="text" name="search" value="{{ filters.search }}"
+      placeholder="🔍 Search title, ID, product…"
+      style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);
+        padding:8px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;width:220px;"
+      onchange="this.form.submit()">
+
+    <select name="status" onchange="this.form.submit()"
+      style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);
+        padding:8px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;">
+      <option value="">All Status</option>
+      <option value="pending"     {% if filters.status == 'pending'     %}selected{% endif %}>⏳ Pending Review</option>
+      <option value="assigned"    {% if filters.status == 'assigned'    %}selected{% endif %}>📬 Assigned</option>
+      <option value="in_progress" {% if filters.status == 'in_progress' %}selected{% endif %}>🔄 In Progress</option>
+      <option value="resolved"    {% if filters.status == 'resolved'    %}selected{% endif %}>✅ Resolved</option>
+      <option value="closed"      {% if filters.status == 'closed'      %}selected{% endif %}>🔒 Closed</option>
+      <option value="rejected"    {% if filters.status == 'rejected'    %}selected{% endif %}>❌ Rejected</option>
+    </select>
+
+    <select name="priority" onchange="this.form.submit()"
+      style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);
+        padding:8px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;">
+      <option value="">All Priority</option>
+      <option value="critical" {% if filters.priority == 'critical' %}selected{% endif %}>🔴 Critical</option>
+      <option value="high"     {% if filters.priority == 'high'     %}selected{% endif %}>🟠 High</option>
+      <option value="medium"   {% if filters.priority == 'medium'   %}selected{% endif %}>🟡 Medium</option>
+      <option value="low"      {% if filters.priority == 'low'      %}selected{% endif %}>🟢 Low</option>
+    </select>
+
+    {% if filters.search or filters.status or filters.priority %}
+    <a href="{% url 'complaint_list' %}" class="btn btn-outline btn-sm">✕ Clear Filters</a>
+    {% endif %}
+  </div>
+</form>
+
+<div class="card">
+  {% if complaints %}
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Title &amp; Product</th>
+          <th>Fault Type</th>
+          {% if profile.role != 'customer' %}<th>Reported By</th>{% endif %}
+          <th>{% if profile.role == 'customer' %}Assigned To (Who's fixing it){% else %}Assigned To{% endif %}</th>
+          <th>Priority</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in complaints %}
+        <tr onclick="location='{% url 'complaint_detail' c.pk %}'">
+          <td><span class="cid">{{ c.complaint_id }}</span></td>
+          <td>
+            <div style="font-weight:600;font-size:13px;color:var(--text);">{{ c.title|truncatechars:40 }}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px;">📦 {{ c.product_name }}{% if c.order_number %} · {{ c.order_number }}{% endif %}</div>
+          </td>
+          <td>
+            {% if c.defect_category %}
+            <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
+              <span style="font-size:15px;">{{ c.defect_category.icon }}</span>
+              <span style="font-size:12px;font-weight:500;">{{ c.defect_category.name }}</span>
+            </div>
+            <span class="role-chip r-{{ c.defect_category.suggested_role }}">{{ c.defect_category.get_suggested_role_display }}</span>
+            {% elif c.status == 'pending' %}
+            <span style="font-size:11px;color:var(--orange);">⏳ Not categorised yet</span>
+            {% else %}
+            <span style="font-size:11px;color:var(--text2);">—</span>
+            {% endif %}
+          </td>
+          {% if profile.role != 'customer' %}
+          <td>
+            <div style="font-size:12px;font-weight:500;">{{ c.raised_by.get_full_name|default:c.raised_by.username }}</div>
+            <span class="role-chip r-customer">Customer</span>
+          </td>
+          {% endif %}
+          <td>
+            {% if c.assigned_to %}
+            <div style="display:flex;align-items:center;gap:7px;">
+              <div class="avatar" style="width:24px;height:24px;font-size:9px;background:{{ c.assigned_to.profile.avatar_color|default:'#6366f1' }}">
+                {{ c.assigned_to.username|slice:":2"|upper }}
+              </div>
+              <div>
+                <div style="font-size:12px;font-weight:600;">{{ c.assigned_to.get_full_name|default:c.assigned_to.username }}</div>
+                <span class="role-chip r-{{ c.assigned_to.profile.role }}">{{ c.assigned_to.profile.get_role_display }}</span>
+              </div>
+            </div>
+            {% elif c.status == 'pending' %}
+            <span style="font-size:11px;color:var(--orange);">⏳ Awaiting admin</span>
+            {% else %}
+            <span style="font-size:11px;color:var(--text2);">Not assigned</span>
+            {% endif %}
+          </td>
+          <td><span class="badge b-{{ c.priority }}">{{ c.priority }}</span></td>
+          <td><span class="badge b-{{ c.status }}">{{ c.get_status_display }}</span></td>
+          <td style="font-size:11px;color:var(--text2);font-family:'Space Mono',monospace;white-space:nowrap;">
+            {{ c.created_at|date:"M d, Y" }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="eico">🔍</div>
+    <h3>No complaints found</h3>
+    <p>
+      {% if filters.search or filters.status or filters.priority %}
+        Try different filters.
+      {% elif profile.role == 'customer' %}
+        <a href="{% url 'raise_complaint' %}" style="color:var(--accent2);">Report your first defect</a>
+      {% else %}
+        Admin hasn't assigned any complaints to you yet.
+      {% endif %}
+    </p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

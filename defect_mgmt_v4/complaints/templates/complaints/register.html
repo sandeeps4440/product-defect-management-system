@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Register — DefectTrack Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg2:#111118;--bg3:#1a1a24;--border:#2a2a3a;--text:#e8e8f0;--text2:#8888a8;
+  --accent:#7c3aed;--accent2:#a855f7;--glow:rgba(124,58,237,.2);--red:#ef4444;--green:#10b981;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  display:flex;align-items:center;justify-content:center;padding:40px 24px;}
+.bg-dots{position:fixed;inset:0;background-image:radial-gradient(rgba(124,58,237,.06) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;}
+.wrap{width:100%;max-width:480px;position:relative;}
+.hdr{text-align:center;margin-bottom:24px;}
+.hdr .mark{font-family:'Space Mono',monospace;font-size:9px;color:var(--accent2);letter-spacing:4px;text-transform:uppercase;margin-bottom:6px;}
+.hdr .title{font-size:24px;font-weight:700;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:30px;}
+.card-title{font-size:15px;font-weight:700;margin-bottom:22px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fg{margin-bottom:15px;}
+label{display:block;font-size:10px;font-weight:700;color:var(--text2);margin-bottom:5px;letter-spacing:.8px;text-transform:uppercase;}
+input,select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+  padding:10px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s;}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow);}
+select option{background:var(--bg3);}
+.ferr{list-style:none;margin-top:4px;}
+.ferr li{font-size:11px;color:#f87171;margin-top:2px;}
+.hint{font-size:10px;color:var(--text2);margin-top:3px;}
+.form-err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-left:3px solid var(--red);
+  border-radius:6px;padding:10px 13px;color:#f87171;font-size:12px;margin-bottom:14px;}
+.btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;
+  padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;
+  transition:all .15s;margin-top:6px;}
+.btn:hover{background:#6d28d9;transform:translateY(-1px);}
+.foot{text-align:center;margin-top:18px;font-size:12px;color:var(--text2);}
+.foot a{color:var(--accent2);text-decoration:none;font-weight:600;}
+.pwd-strength{height:3px;border-radius:3px;background:var(--border);margin-top:5px;overflow:hidden;}
+.pwd-strength .bar{height:100%;width:0;transition:width .3s,background .3s;border-radius:3px;}
+</style>
+</head>
+<body>
+<div class="bg-dots"></div>
+<div class="wrap">
+  <div class="hdr">
+    <div class="mark">// new account</div>
+    <div class="title">Join DefectTrack<span style="color:var(--accent2)">Pro</span></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Create Your Account</div>
+
+    {% if form.non_field_errors %}
+    <div class="form-err">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <form method="post" action="{% url 'register' %}">
+      {% csrf_token %}
+      <div class="row2">
+        <div class="fg">
+          <label>First Name</label>
+          <input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}" placeholder="First">
+        </div>
+        <div class="fg">
+          <label>Last Name</label>
+          <input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}" placeholder="Last">
+        </div>
+      </div>
+      <div class="fg">
+        <label>Username *</label>
+        <input type="text" name="username" value="{{ form.username.value|default:'' }}" placeholder="Choose a username" autocomplete="username" autofocus>
+        {% if form.username.errors %}<ul class="ferr">{% for e in form.username.errors %}<li>⚠ {{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+      <div class="fg">
+        <label>Email</label>
+        <input type="email" name="email" value="{{ form.email.value|default:'' }}" placeholder="your@email.com">
+      </div>
+      <div class="fg">
+        <label>Your Role *</label>
+        <select name="role" id="roleSelect">
+          {% for val, lbl in form.fields.role.choices %}
+          <option value="{{ val }}" {% if form.role.value == val %}selected{% endif %}>{{ lbl }}</option>
+          {% endfor %}
+        </select>
+        <div class="hint" id="roleHint">Select your role in the system</div>
+      </div>
+      <div class="row2">
+        <div class="fg">
+          <label>Password *</label>
+          <input type="password" name="password1" id="pwd1" placeholder="Min 6 characters" autocomplete="new-password">
+          <div class="pwd-strength"><div class="bar" id="pwBar"></div></div>
+          {% if form.password1.errors %}<ul class="ferr">{% for e in form.password1.errors %}<li>⚠ {{ e }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+        <div class="fg">
+          <label>Confirm Password *</label>
+          <input type="password" name="password2" id="pwd2" placeholder="Repeat password" autocomplete="new-password">
+          {% if form.password2.errors %}<ul class="ferr">{% for e in form.password2.errors %}<li>⚠ {{ e }}</li>{% endfor %}</ul>{% endif %}
+        </div>
+      </div>
+      <button type="submit" class="btn">Create Account →</button>
+    </form>
+    <div class="foot">Already have an account? <a href="{% url 'login' %}">Sign in</a></div>
+  </div>
+</div>
+<script>
+const hints={customer:'You can report product defects and track their status',developer:'You handle software bugs and technical issues assigned to you',designer:'You handle UI/UX issues assigned to you',tester:'You handle functionality and testing issues',qa_engineer:'You handle security and compatibility issues',product_manager:'You handle physical damage and product complaints',support:'You handle documentation and general support issues',admin:'Full access — review all complaints and assign to teams'};
+document.getElementById('roleSelect').addEventListener('change',function(){
+  document.getElementById('roleHint').textContent=hints[this.value]||'';
+});
+document.getElementById('pwd1').addEventListener('input',function(){
+  const l=this.value.length;const b=document.getElementById('pwBar');
+  if(l===0){b.style.width='0';return;}
+  if(l<4){b.style.width='25%';b.style.background='#ef4444';}
+  else if(l<6){b.style.width='50%';b.style.background='#f59e0b';}
+  else if(l<8){b.style.width='75%';b.style.background='#3b82f6';}
+  else{b.style.width='100%';b.style.background='#10b981';}
+});
+</script>
+</body></html>
